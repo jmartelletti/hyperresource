@@ -11,6 +11,8 @@ class HyperResource
       ## +self.class.namespace != nil+.
       def get
         self.response = faraday_connection.get(self.href || '')
+        puts "get response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -26,6 +28,8 @@ class HyperResource
         self.response = faraday_connection.post do |req|
           req.body = adapter.serialize(attrs)
         end
+        puts "post response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -43,6 +47,8 @@ class HyperResource
         self.response = faraday_connection.put do |req|
           req.body = adapter.serialize(attrs)
         end
+        puts "put response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -54,12 +60,16 @@ class HyperResource
         self.response = faraday_connection.patch do |req|
           req.body = adapter.serialize(attrs)
         end
+        puts "patch response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
       ## DELETEs this resource's href, and returns the response resource.
       def delete
         self.response = faraday_connection.delete
+        puts "delete response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -69,15 +79,19 @@ class HyperResource
         url ||= URI.join(self.root, self.href)
 
         key = "faraday_connection_#{url}"
+        puts "Looking up key: #{key}"
         return Thread.current[key] if Thread.current[key]
 
         opts = {}
 
         opts[:builder] = Faraday::Builder.new do |builder|
 
+          
+
           self.middleware.each do |middleware|
             builder.use middleware
           end
+
           # builder.use Octokit::Response::FeedParser
           builder.adapter Faraday.default_adapter
         end
@@ -85,6 +99,7 @@ class HyperResource
         opts[:url] = url
 
         fc = Faraday.new(opts)
+        puts "Created new faraday connection with #{opts}"
         fc.headers.merge!('User-Agent' => "HyperResource #{HyperResource::VERSION}")
         fc.headers.merge!(self.headers || {})
         if ba=self.auth[:basic]
