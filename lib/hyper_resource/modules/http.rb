@@ -11,6 +11,8 @@ class HyperResource
       ## +self.class.namespace != nil+.
       def get
         self.response = faraday_connection.get(self.href || '')
+        puts "get response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -26,6 +28,8 @@ class HyperResource
         self.response = faraday_connection.post do |req|
           req.body = adapter.serialize(attrs)
         end
+        puts "post response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -43,6 +47,8 @@ class HyperResource
         self.response = faraday_connection.put do |req|
           req.body = adapter.serialize(attrs)
         end
+        puts "put response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -54,12 +60,16 @@ class HyperResource
         self.response = faraday_connection.patch do |req|
           req.body = adapter.serialize(attrs)
         end
+        puts "patch response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
       ## DELETEs this resource's href, and returns the response resource.
       def delete
         self.response = faraday_connection.delete
+        puts "delete response --------------------"
+        puts self.response.inspect
         finish_up
       end
 
@@ -67,10 +77,29 @@ class HyperResource
       ## headers (including auth).  Threadsafe.
       def faraday_connection(url=nil)
         url ||= URI.join(self.root, self.href)
+
         key = "faraday_connection_#{url}"
+        puts "Looking up key: #{key}"
         return Thread.current[key] if Thread.current[key]
 
-        fc = Faraday.new(:url => url)
+        opts = {}
+
+        opts[:builder] = Faraday::Builder.new do |builder|
+
+          
+
+          self.middleware.each do |middleware|
+            builder.use middleware
+          end
+
+          # builder.use Octokit::Response::FeedParser
+          builder.adapter Faraday.default_adapter
+        end
+
+        opts[:url] = url
+
+        fc = Faraday.new(opts)
+        puts "Created new faraday connection with #{opts}"
         fc.headers.merge!('User-Agent' => "HyperResource #{HyperResource::VERSION}")
         fc.headers.merge!(self.headers || {})
         if ba=self.auth[:basic]
@@ -83,7 +112,7 @@ class HyperResource
 
       def finish_up
         begin
-          self.body = self.adapter.deserialize(self.response.body) unless self.response.body.nil?
+          self.body = self.adapter.deserialize(self.response.body) unless (self.response.body.nil? || self.response.body == " ")
         rescue StandardError => e
           raise HyperResource::ResponseError.new(
             "Error when deserializing response body",
@@ -95,26 +124,28 @@ class HyperResource
         self.adapter.apply(self.body, self)
         self.loaded = true
 
-        status = self.response.status
-        if status / 100 == 2
-          return to_response_class
-        elsif status / 100 == 3
-          ## TODO redirect logic?
-        elsif status / 100 == 4
-          raise HyperResource::ClientError.new(status.to_s,
-                                               :response => self.response,
-                                               :body => self.body)
-        elsif status / 100 == 5
-          raise HyperResource::ServerError.new(status.to_s,
-                                               :response => self.response,
-                                               :body => self.body)
+        return to_response_class
 
-        else ## 1xx? really?
-          raise HyperResource::ResponseError.new("Got status #{status}, wtf?",
-                                                 :response => self.response,
-                                                 :body => self.body)
+        # status = self.response.status
+        # if status / 100 == 2
+        #   return to_response_class
+        # elsif status / 100 == 3
+        #   ## TODO redirect logic?
+        # elsif status / 100 == 4
+        #   raise HyperResource::ClientError.new(status.to_s,
+        #                                        :response => self.response,
+        #                                        :body => self.body)
+        # elsif status / 100 == 5
+        #   raise HyperResource::ServerError.new(status.to_s,
+        #                                        :response => self.response,
+        #                                        :body => self.body)
 
-        end
+        # else ## 1xx? really?
+        #   raise HyperResource::ResponseError.new("Got status #{status}, wtf?",
+        #                                          :response => self.response,
+        #                                          :body => self.body)
+
+        # end
       end
 
     end

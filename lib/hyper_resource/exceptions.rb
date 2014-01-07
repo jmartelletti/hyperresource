@@ -17,9 +17,15 @@ class HyperResource
     ## May be blank, e.g. in case of deserialization errors.
     attr_accessor :body
 
+    attr_accessor :status
+    attr_accessor :response_headers
+
+
     def initialize(message, attrs={}) # @private
       self.response = attrs[:response]
       self.body = attrs[:body]
+      @status = message
+      @response_headers = []
 
       ## Try to help out with the message
       if self.body

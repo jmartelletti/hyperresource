@@ -47,6 +47,8 @@ public
   def initialize(opts={})
     return init_from_resource(opts) if opts.kind_of?(HyperResource)
 
+    self.middleware = opts[:middleware] || [Kumolus::Response::RaiseError]
+
     self.root       = opts[:root] || self.class.root
     self.href       = opts[:href] || ''
     self.auth       = (self.class.auth || {}).merge(opts[:auth] || {})

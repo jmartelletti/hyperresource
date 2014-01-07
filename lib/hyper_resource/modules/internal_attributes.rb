@@ -36,6 +36,7 @@ module HyperResource::Modules
           :headers,
           :namespace,
           :adapter,
+          :middleware,
 
           :request,
           :response,
